@@ -60,6 +60,7 @@ class Aplicacao:
 
     def exportar_arquivo(self):
         """ Exporta os dados climáticos para um CSV sem substituir os dados existentes """
+      
         # Atualiza os dados do clima antes de exportar
         self.atualizar_dados_clima()
 
