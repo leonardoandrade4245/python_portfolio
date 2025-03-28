@@ -4,6 +4,8 @@ import requests
 from datetime import datetime
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import os
+
 
 API_KEY = "14cff45182069bb3941ceec752a35e99"
 CIDADE = "São Paulo"
@@ -22,8 +24,8 @@ class Aplicacao:
         # Criando o Frame dentro da janela
         self.tela = Frame(self.layout, bg="lightblue")
         
-        # Inicializando a lista para armazenar as temperaturas e horários
-        self.dados_temperatura = []
+        # Inicializando a lista para armazenar as temperaturas, umidade e horários
+        self.dados_clima = []
         
         # Criando os elementos na tela
         self.titulo_interface = Label(self.tela, text="Veja o clima Tempo Atual.", fg="black", bg="lightblue", pady=10, font=("Arial", 16, "bold"))
@@ -55,44 +57,51 @@ class Aplicacao:
 
         # Obtém informações do clima
         self.temperatura = dados["main"]["temp"]
+        self.umidade = dados["main"]["humidity"]
         self.descricao = dados["weather"][0]["description"]
         self.data_hora = datetime.now().strftime("%d/%m/%Y %H:%M")
 
     def exportar_arquivo(self):
-        """ Exporta os dados climáticos para um CSV sem substituir os dados existentes """
-      
+        """ Exporta os dados climáticos para um novo CSV com as colunas corretas """
+    
         # Atualiza os dados do clima antes de exportar
         self.atualizar_dados_clima()
 
         # Exibe as labels de clima após o botão salvar ser clicado
         self.clima_atual.config(text=f"Clima atual: {self.temperatura}°C")
-        self.status_atual.config(text=f"Status da umidade atual: {self.descricao.capitalize()}")
+        self.status_atual.config(text=f"Status da umidade atual: {self.umidade}%")
 
         self.clima_atual.pack(pady=10)
         self.status_atual.pack(pady=10)
 
         # Adiciona a nova medição ao gráfico e à lista de dados
-        self.dados_temperatura.append((self.data_hora, self.temperatura))
+        self.dados_clima.append((self.data_hora, self.temperatura, self.umidade))
 
-        # Salvando no arquivo CSV
+        # Cria o DataFrame com os dados
         dados = pd.DataFrame(
             {
                 'Data e Hora': [self.data_hora],
                 'Cidade': [CIDADE],
                 'Temperatura (°C)': [self.temperatura],
+                'Umidade (%)': [self.umidade],
                 'Descrição': [self.descricao.capitalize()]
             }
         )
 
-        # Abrindo o arquivo no modo append ('a') para adicionar os dados ao invés de substituir
-        dados.to_csv('clima_exportado.csv', mode='a', header=False, index=False)
+        # Verifica se o arquivo existe
+        if not os.path.exists('clima_exportadoIII.csv'):
+            # Se o arquivo não existir, cria o arquivo com o cabeçalho
+            dados.to_csv('clima_exportadoIII.csv', mode='w', header=True, index=False)
+        else:
+            # Se o arquivo já existir, adiciona os dados sem cabeçalho
+            dados.to_csv('clima_exportadoIII.csv', mode='a', header=False, index=False)
 
         print("Arquivo salvo com sucesso!")
 
     def gerar_grafico(self):
-        """ Gera o gráfico da Temperatura ao longo do tempo """
+        """ Gera o gráfico da Temperatura e Umidade ao longo do tempo """
         # Lê o arquivo CSV
-        dados_csv = pd.read_csv('clima_exportado.csv')
+        dados_csv = pd.read_csv('clima_exportadoIII.csv')
 
         # Converte a coluna 'Data e Hora' para datetime
         dados_csv['Data e Hora'] = pd.to_datetime(dados_csv['Data e Hora'], format="%d/%m/%Y %H:%M")
@@ -100,9 +109,10 @@ class Aplicacao:
         # Cria o gráfico
         plt.figure(figsize=(10, 6))
         plt.plot(dados_csv['Data e Hora'], dados_csv['Temperatura (°C)'], marker='o', color='b', label='Temperatura')
-        plt.title('Temperatura ao Longo do Tempo', fontsize=16)
+        plt.plot(dados_csv['Data e Hora'], dados_csv['Umidade (%)'], marker='x', color='g', label='Umidade')
+        plt.title('Temperatura e Umidade ao Longo do Tempo', fontsize=16)
         plt.xlabel('Data e Hora', fontsize=12)
-        plt.ylabel('Temperatura (°C)', fontsize=12)
+        plt.ylabel('Valor (Temperatura °C / Umidade %)', fontsize=12)
         plt.xticks(rotation=45)
         plt.grid(True)
 
